@@ -3,13 +3,13 @@
   port: 12001
   path: /data/config/
   logname: config.log
-  time: 5
+  interval: 5
 
 - mongos:
   ip: 127.0.0.1
   port: 12002
   logname: mongos.log
-  time: 5
+  interval: 5
 
 - mongod:
   ip: 127.0.0.1
@@ -17,7 +17,7 @@
   is_set: false
   path: /data/mongod1
   logname: mongod1.log
-  time: 3
+  interval: 3
 
 - mongod:
   ip: 127.0.0.1
@@ -25,5 +25,5 @@
   is_set: false
   path: /data/mongod2
   logname: mongod2.log
-  time: 3
+  interval: 3
 

@@ -4,6 +4,7 @@ import yaml
 import os
 import sh
 import logging
+import pymongo
 logging.basicConfig(
     format='%(asctime)-15s%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -33,6 +34,28 @@ class MongoSeverManager(object):
                 Exception('unsupported cmd type')
         self.cmd = sorted(self.cmd, key=lambda cmd: cmd.priority, reverse=True)
 
+    def run(self):
+        for c in self.cmd:
+            c.prepare()
+            c.cmd()
+            c.wait()
+        logging.info('boot all mongods finished')
+
+        self.sharding()
+        logging.info('all sharding done')
+        self.loop()
+
+    def loop(self):
+        while True:
+            sh.sleep(10)
+
+    def sharding(self):
+        conn = pymongo.Connection('localhost', self.mongos.port)
+        db = conn.admin
+        for mongod in self.mongods:
+            shard_address = ':'.join([self.ip, self.port])
+            logging.info('add sharding address %s', shard_address)
+            db.command('addshard', shard_address)
 
 class MongoCmd(object):
 
@@ -46,7 +69,7 @@ class MongoCmd(object):
     def cmd(self):
         return 'TODO'
 
-    def precmd(self):
+    def prepare(self):
         if hasattr(self, 'path') and not os.path.isdir(self.path):
             logging.info('mkdir ' + self.path)
             sh.mkdir('-p', self.path)
@@ -56,9 +79,9 @@ class MongoCmd(object):
             if v:
                 setattr(self, k, v)
 
-    def postcmd(self):
+    def wait(self):
         while not self.ok:
-            sh.sleep(self.time)
+            sh.sleep(self.interval)
 
     @property
     def success_msg(self):
@@ -110,10 +133,4 @@ class MongoMongod(MongoCmd):
 
 if __name__ == '__main__':
     mongo_mgr = MongoSeverManager('config.yaml')
-    for c in mongo_mgr.cmd:
-        c.precmd()
-        c.cmd()
-        c.postcmd()
-
-    for c in mongo_mgr.cmd:
-        print c.ok
+    mongo_mgr.run()
