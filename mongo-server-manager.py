@@ -4,7 +4,9 @@ import yaml
 import os
 import sh
 import logging
-logging.basicConfig(format='%(asctime)-15s%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    format='%(asctime)-15s%(levelname)s:%(message)s', level=logging.INFO)
+
 
 class MongoSeverManager(object):
 
@@ -55,16 +57,19 @@ class MongoCmd(object):
                 setattr(self, k, v)
 
     def postcmd(self):
-        sh.sleep(5)
+        while not self.ok:
+            sh.sleep(self.time)
 
     @property
     def success_msg(self):
-        return str(self.port).strip() + ' pinged successfully'
+        return 'waiting for connections'
 
     def log_redirect(self, msg):
-        if self.success_msg in msg:
+        if self.success_msg in msg and not self.ok:
             self.ok = True
             logging.info(str(self.port) + ' listen success')
+        self.logf.write(msg)
+        self.logf.flush()
 
 
 class MongoMongos(MongoCmd):
@@ -75,9 +80,9 @@ class MongoMongos(MongoCmd):
 
     def cmd(self):
         logging.info('start main mongos')
-        sh.nohup(
-            'mongos',
-            port=self.port, configdb='localhost:' + str(self.mgr.config.port), _bg=True, _out=self.logname)
+        sh.mongos(
+            port=self.port, configdb='localhost:' + str(self.mgr.config.port), _bg=True, _out=self.log_redirect)
+
 
 class MongoConfig(MongoCmd):
 
@@ -87,9 +92,8 @@ class MongoConfig(MongoCmd):
 
     def cmd(self):
         logging.info('start config mongod')
-        sh.nohup(
-            'mongod',
-            dbpath=self.path, port=self.port, smallfiles=True, _bg=True,  _out=self.logname)
+        sh.mongod(
+            dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
 
 
 class MongoMongod(MongoCmd):
@@ -100,9 +104,8 @@ class MongoMongod(MongoCmd):
 
     def cmd(self):
         logging.info('start one mongod')
-        sh.nohup(
-            'mongod',
-            dbpath=self.path, port=self.port, smallfiles=True, _bg=True,  _out=self.logname)
+        sh.mongod(
+            dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
 
 
 if __name__ == '__main__':
@@ -111,6 +114,6 @@ if __name__ == '__main__':
         c.precmd()
         c.cmd()
         c.postcmd()
-    
-    while True:
-        pass
+
+    for c in mongo_mgr.cmd:
+        print c.ok
