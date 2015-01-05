@@ -2,20 +2,24 @@
   ip: 127.0.0.1
   port: 12001
   path: /data/config/
+  logname: config.log
 
 - mongos:
   ip: 127.0.0.1
   port: 12002
+  logname: mongos.log
 
 - mongod:
   ip: 127.0.0.1
   port: 12003
   is_set: false
   path: /data/mongod1
+  logname: mongod1.log
 
 - mongod:
   ip: 127.0.0.1
   port: 12004
   is_set: false
   path: /data/mongod2
+  logname: mongod2.log
 

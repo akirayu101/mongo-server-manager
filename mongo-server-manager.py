@@ -3,7 +3,8 @@ __author__ = 'hzyuxin'
 import yaml
 import os
 import sh
-
+import logging
+logging.basicConfig(format='%(asctime)-15s%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class MongoSeverManager(object):
 
@@ -37,12 +38,15 @@ class MongoCmd(object):
         self.data = d
         self.mgr = mgr
         self.bind()
+        self.ok = False
+        self.logf = open(self.logname, 'wb+')
 
     def cmd(self):
         return 'TODO'
 
     def precmd(self):
         if hasattr(self, 'path') and not os.path.isdir(self.path):
+            logging.info('mkdir ' + self.path)
             sh.mkdir('-p', self.path)
 
     def bind(self):
@@ -53,6 +57,15 @@ class MongoCmd(object):
     def postcmd(self):
         sh.sleep(5)
 
+    @property
+    def success_msg(self):
+        return str(self.port).strip() + ' pinged successfully'
+
+    def log_redirect(self, msg):
+        if self.success_msg in msg:
+            self.ok = True
+            logging.info(str(self.port) + ' listen success')
+
 
 class MongoMongos(MongoCmd):
 
@@ -61,10 +74,10 @@ class MongoMongos(MongoCmd):
         self.priority = 2
 
     def cmd(self):
+        logging.info('start main mongos')
         sh.nohup(
             'mongos',
-            port=self.port, configdb='localhost:' + str(self.mgr.config.port), _bg=True)
-
+            port=self.port, configdb='localhost:' + str(self.mgr.config.port), _bg=True, _out=self.logname)
 
 class MongoConfig(MongoCmd):
 
@@ -73,9 +86,10 @@ class MongoConfig(MongoCmd):
         self.priority = 3
 
     def cmd(self):
+        logging.info('start config mongod')
         sh.nohup(
             'mongod',
-            dbpath=self.path, port=self.port, smallfiles=True, _bg=True)
+            dbpath=self.path, port=self.port, smallfiles=True, _bg=True,  _out=self.logname)
 
 
 class MongoMongod(MongoCmd):
@@ -85,9 +99,10 @@ class MongoMongod(MongoCmd):
         self.priority = 1
 
     def cmd(self):
+        logging.info('start one mongod')
         sh.nohup(
             'mongod',
-            dbpath=self.path, port=self.port, smallfiles=True, _bg=True)
+            dbpath=self.path, port=self.port, smallfiles=True, _bg=True,  _out=self.logname)
 
 
 if __name__ == '__main__':
