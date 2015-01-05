@@ -53,7 +53,7 @@ class MongoSeverManager(object):
         conn = pymongo.Connection('localhost', self.mongos.port)
         db = conn.admin
         for mongod in self.mongods:
-            shard_address = ':'.join([self.ip, self.port])
+            shard_address = ':'.join([mongod.ip, str(mongod.port)])
             logging.info('add sharding address %s', shard_address)
             db.command('addshard', shard_address)
 
