@@ -1,21 +1,21 @@
 - config:
   ip: 127.0.0.1
-  port: 2001
+  port: 12001
   path: /data/config/
 
 - mongos:
   ip: 127.0.0.1
-  port: 2002
+  port: 12002
 
 - mongod:
   ip: 127.0.0.1
-  port: 2003
+  port: 12003
   is_set: false
   path: /data/mongod1
 
 - mongod:
   ip: 127.0.0.1
-  port: 2004
+  port: 12004
   is_set: false
   path: /data/mongod2
 
