@@ -51,6 +51,14 @@ class MongoSeverManager(object):
         while True:
             sh.sleep(10)
 
+    def init_repl_sets():
+        for key, repl_set in self.repl_sets.items()
+            name = ':'.join([repl_set[0].hostname, str(key)])
+            conn = pymongo.Connection(name)
+            db = conn.admin
+            logging.info('init repl set %s', name)
+
+
     def sharding(self):
         conn = pymongo.Connection('localhost', self.mongos.port)
         db = conn.admin
@@ -63,7 +71,6 @@ class MongoSeverManager(object):
                 except pymongo.errors.OperationFailure:
                     logging.warn('%s already sharded', shard_address)
             else:
-                #repl_set
                 pass
 
 
@@ -140,8 +147,8 @@ class MongoMongod(MongoCmd):
         logging.info('start one mongod')
         if self.is_set:
             sh.mongod(
-                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=':'.join([self.hostname, self.replname]))
-            self.mgr.repl_sets[self.replname].append(self.port)
+                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=':'.join([self.hostname, str(self.replname)]))
+            self.mgr.repl_sets[self.replname].append(self)
         else:
             sh.mongod(
                 dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
