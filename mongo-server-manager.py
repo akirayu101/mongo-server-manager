@@ -5,6 +5,7 @@ import os
 import sh
 import logging
 import pymongo
+from collections import defaultdict
 logging.basicConfig(
     format='%(asctime)-15s%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -17,6 +18,7 @@ class MongoSeverManager(object):
             self.cmd = []
             self.mongods = []
             self.parse_config()
+            self.repl_sets = defaultdict(list)
 
     def parse_config(self):
         for cmd_dict in self.yaml:
@@ -53,12 +55,16 @@ class MongoSeverManager(object):
         conn = pymongo.Connection('localhost', self.mongos.port)
         db = conn.admin
         for mongod in self.mongods:
-            shard_address = ':'.join(['localhost', str(mongod.port)])
-            logging.info('add sharding address %s', shard_address)
-            try:
-                db.command('addshard', shard_address)
-            except pymongo.errors.OperationFailure:
-                logging.warn('%s already sharded', shard_address)
+            if not mongod.is_set:
+                shard_address = ':'.join(['localhost', str(mongod.port)])
+                logging.info('add sharding address %s', shard_address)
+                try:
+                    db.command('addshard', shard_address)
+                except pymongo.errors.OperationFailure:
+                    logging.warn('%s already sharded', shard_address)
+            else:
+                #repl_set
+                pass
 
 
 class MongoCmd(object):
@@ -127,12 +133,19 @@ class MongoMongod(MongoCmd):
 
     def __init__(self, d, mgr):
         super(MongoMongod, self).__init__(d, mgr)
-        self.priority = 1
+        self.priority = 4
+        self.hostname = sh.cat('/etc/hostname').strip()
 
     def cmd(self):
         logging.info('start one mongod')
-        sh.mongod(
-            dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
+        if self.is_set:
+            sh.mongod(
+                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=':'.join([self.hostname, self.replname]))
+            self.mgr.repl_sets[self.replname].append(self.port)
+        else:
+            sh.mongod(
+                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
+
 
 
 if __name__ == '__main__':
