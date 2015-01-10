@@ -79,6 +79,7 @@ class MongoSeverManager(object):
     def sharding(self):
         conn = pymongo.Connection('localhost', self.mongos.port)
         db = conn.admin
+        # add no repl set mongod
         for mongod in self.mongods:
             if not mongod.is_set:
                 shard_address = ':'.join(['localhost', str(mongod.port)])
@@ -90,6 +91,13 @@ class MongoSeverManager(object):
             else:
                 pass
 
+        # add repl set mongod
+        for mongod_set in self.repl_sets.values():
+            shard_address = mongod_set[0].replset_name
+            try:
+                db.command('addshard', shard_address)
+            except pymongo.errors.OperationFailure:
+                    logging.warn('%s already sharded', shard_address)
 
 class MongoCmd(object):
 
