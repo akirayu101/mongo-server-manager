@@ -92,12 +92,14 @@ class MongoSeverManager(object):
                 pass
 
         # add repl set mongod
+        sh.sleep(60)
         for mongod_set in self.repl_sets.values():
-            shard_address = mongod_set[0].replset_name
             try:
+                shard_address = mongod_set[1].replset_name
                 db.command('addshard', shard_address)
             except pymongo.errors.OperationFailure:
-                    logging.warn('%s already sharded', shard_address)
+                logging.warn('%s already sharded', shard_address)
+
 
 class MongoCmd(object):
 
@@ -145,8 +147,11 @@ class MongoMongos(MongoCmd):
 
     def cmd(self):
         logging.info('start main mongos')
+        ip = sh.hostname('-i').strip()
+        configdb_path = ':'.join([ip, str(self.mgr.config.port)])
+
         sh.mongos(
-            port=self.port, configdb='localhost:' + str(self.mgr.config.port), _bg=True, _out=self.log_redirect)
+            port=self.port, configdb=configdb_path, _bg=True, _out=self.log_redirect)
 
 
 class MongoConfig(MongoCmd):
