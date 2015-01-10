@@ -51,12 +51,28 @@ class MongoSeverManager(object):
         while True:
             sh.sleep(10)
 
-    def init_repl_sets():
-        for key, repl_set in self.repl_sets.items()
-            name = ':'.join([repl_set[0].hostname, str(key)])
-            conn = pymongo.Connection(name)
+    def init_repl_sets(self):
+        for repl_set_name, repl_set in self.repl_sets.items:
+
+            # 1.construct init command
+            command = {}
+            command["_id"] = repl_set_name
+            command['members'] = []
+            for i, mongod in enumerate(repl_set):
+                member = {}
+                member['_id'] = i
+                member['host'] = "%s:%d" %(mongod.hostname, mongod.port)
+                command['members'].append(member)
+
+            # 2.connect to one mongod for set init
+            one_mongod = repl_set[0]
+            one_mongod_name = "%s:%d" % (one_mongod.hostname, one_mongod.port)
+            conn = pymongo.Connection(one_mongod_name)
             db = conn.admin
-            logging.info('init repl set %s', name)
+            logging.info('init repl set %s', one_mongod_name)
+
+            # 3.init set
+            db.command('replsetinitiate', command)
 
 
     def sharding(self):
@@ -146,9 +162,10 @@ class MongoMongod(MongoCmd):
     def cmd(self):
         logging.info('start one mongod')
         if self.is_set:
+            self.replset_name = "%s/%s:%d" %(self.setname, self.hostname, self.replset)
             sh.mongod(
-                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=':'.join([self.hostname, str(self.replname)]))
-            self.mgr.repl_sets[self.replname].append(self)
+                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=replset_name)
+            self.mgr.repl_sets[self.setname].append(self)
         else:
             sh.mongod(
                 dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)

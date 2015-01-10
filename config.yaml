@@ -18,7 +18,8 @@
   path: /data/mongod1
   logname: mongod1.log
   interval: 3
-  replname: 1001
+  setname: mongod_set1
+  replset: 12004
 
 - mongod:
   ip: 127.0.0.1
@@ -27,5 +28,6 @@
   path: /data/mongod2
   logname: mongod2.log
   interval: 3
-  replname : 1001
+  setname: mongod_set1
+  replset: 12003
 
