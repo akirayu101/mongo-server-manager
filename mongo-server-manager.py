@@ -43,6 +43,7 @@ class MongoSeverManager(object):
             c.wait()
         logging.info('boot all mongods finished')
 
+        self.init_repl_sets()
         self.sharding()
         logging.info('all sharding done')
         self.loop()
@@ -52,7 +53,7 @@ class MongoSeverManager(object):
             sh.sleep(10)
 
     def init_repl_sets(self):
-        for repl_set_name, repl_set in self.repl_sets.items:
+        for repl_set_name, repl_set in self.repl_sets.items():
 
             # 1.construct init command
             command = {}
@@ -61,8 +62,9 @@ class MongoSeverManager(object):
             for i, mongod in enumerate(repl_set):
                 member = {}
                 member['_id'] = i
-                member['host'] = "%s:%d" %(mongod.hostname, mongod.port)
+                member['host'] = "%s:%d" % (mongod.hostname, mongod.port)
                 command['members'].append(member)
+            logging.info("init set command \n %s", repr(command))
 
             # 2.connect to one mongod for set init
             one_mongod = repl_set[0]
@@ -72,8 +74,7 @@ class MongoSeverManager(object):
             logging.info('init repl set %s', one_mongod_name)
 
             # 3.init set
-            db.command('replsetinitiate', command)
-
+            db.command('replSetInitiate', command)
 
     def sharding(self):
         conn = pymongo.Connection('localhost', self.mongos.port)
@@ -162,14 +163,14 @@ class MongoMongod(MongoCmd):
     def cmd(self):
         logging.info('start one mongod')
         if self.is_set:
-            self.replset_name = "%s/%s:%d" %(self.setname, self.hostname, self.replset)
+            self.replset_name = "%s/%s:%d" % (self.setname,
+                                              self.hostname, self.replset)
             sh.mongod(
-                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=replset_name)
+                dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect, replSet=self.replset_name)
             self.mgr.repl_sets[self.setname].append(self)
         else:
             sh.mongod(
                 dbpath=self.path, port=self.port, smallfiles=True, _bg=True, _out=self.log_redirect)
-
 
 
 if __name__ == '__main__':
